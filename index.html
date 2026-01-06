@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Scribd Downloader GUI</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background-color: #f0f2f5; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        h1 { color: #1a8917; text-align: center; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input[type="text"] { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        .checkbox-group { display: flex; align-items: center; gap: 10px; }
+        button { width: 100%; padding: 12px; background-color: #1a8917; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
+        button:hover { background-color: #156d12; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+        #status { margin-top: 20px; padding: 10px; border-radius: 4px; text-align: center; display: none; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .loading { color: #666; font-style: italic; }
+        #logs { margin-top: 20px; background: #2d2d2d; color: #f8f8f2; padding: 10px; height: 200px; overflow-y: auto; font-family: monospace; font-size: 12px; border-radius: 4px; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Scribd Downloader</h1>
+
+        <div class="form-group">
+            <label for="url">Document URL:</label>
+            <input type="text" id="url" placeholder="https://www.scribd.com/doc/..." />
+        </div>
+
+        <div class="form-group checkbox-group">
+            <input type="checkbox" id="imageMode" />
+            <label for="imageMode" style="margin-bottom: 0;">Image-based Mode (/i)</label>
+        </div>
+
+        <button id="downloadBtn">Download</button>
+
+        <div id="status"></div>
+        <div id="logs">Waiting for logs...</div>
+    </div>
+
+    <script>
+        const btn = document.getElementById('downloadBtn');
+        const statusDiv = document.getElementById('status');
+        const urlInput = document.getElementById('url');
+        const imageModeInput = document.getElementById('imageMode');
+        const logsDiv = document.getElementById('logs');
+
+        // 監聽來自後端的 Log
+        if (window.api) {
+            window.api.onLog((message) => {
+                logsDiv.textContent += message; // 直接附加文字，支援換行與進度條更新
+                logsDiv.scrollTop = logsDiv.scrollHeight; // 自動捲動到底部
+            });
+        } else {
+            console.error('window.api is not defined. Preload script might have failed.');
+            logsDiv.textContent = 'Error: API not loaded. Please check console logs (Ctrl+Shift+I).';
+        }
+
+        btn.addEventListener('click', async () => {
+            const url = urlInput.value.trim();
+            if (!url) return;
+
+            // UI Update
+            btn.disabled = true;
+            btn.innerText = 'Downloading...';
+            statusDiv.style.display = 'block';
+            statusDiv.className = 'loading';
+            statusDiv.innerText = 'Processing... Please check the terminal for detailed progress.';
+            logsDiv.textContent = ''; // Clear previous logs
+
+            // Call Electron API
+            if (window.api) {
+                const result = await window.api.download(url, imageModeInput.checked);
+
+                // Handle Result
+                btn.disabled = false;
+                btn.innerText = 'Download';
+                statusDiv.className = result.success ? 'success' : 'error';
+                statusDiv.innerText = result.message;
+            } else {
+                alert('Electron API is not available. Please restart the app.');
+                btn.disabled = false;
+                btn.innerText = 'Download';
+            }
+        });
+    </script>
+</body>
+</html>

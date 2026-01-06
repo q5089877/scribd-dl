@@ -16,22 +16,26 @@ class PuppeteerSg {
    */
   async launch() {
     const isCI = process.env.CI === 'true'; // Detect if running in CI
-    const args = [];
-    if (isCI) {
-      args.push('--no-sandbox', '--disable-setuid-sandbox');
-    }
+    // 加入更多穩定性參數，減少瀏覽器卡頓導致的 Timeout
+    const args = [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage', // 防止在某些環境下記憶體不足
+      '--disable-gpu'            // 關閉 GPU 加速，減少資源消耗與不穩定
+    ];
     this.browser = await puppeteer.launch({
-      headless: "new",
+      headless: false,
       defaultViewport: null,
       args,
       timeout: 0,
+      protocolTimeout: 240000,
     });
   }
 
   /**
    * New a page
-   * @param {string} url 
-   * @returns 
+   * @param {string} url
+   * @returns
    */
   async getPage(url) {
     if (!this.browser) {
